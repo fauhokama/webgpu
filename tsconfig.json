@@ -25,13 +25,10 @@
         "strictNullChecks": false,
         "jsx": "react",
         "esModuleInterop": true,
-        "allowSyntheticDefaultImports": true
+        "allowSyntheticDefaultImports": true,
+        "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"]
     },
-    "include": [
-        "definitions.d.ts",
-        "src/**/*",
-        "node_modules/@webgpu/types/**/*"
-    ],
+    "include": ["definitions.d.ts", "src/**/*"],
     "compileOnSave": false,
     "buildOnSave": false
 }
