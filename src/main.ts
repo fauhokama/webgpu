@@ -12,7 +12,7 @@ const getBasics = async () => {
 
     const adapter = await gpu.requestAdapter();
     const device = await adapter.requestDevice();
-    return { adapter, device };
+    return { device };
 };
 
 const canvasRelated = (device: GPUDevice) => {
@@ -75,7 +75,7 @@ const getCellPipeline = (device, canvasFormat) => {
 };
 
 const main = async () => {
-    const { adapter, device } = await getBasics();
+    const { device } = await getBasics();
     const { context, canvasFormat } = canvasRelated(device);
 
     const vertices = new Float32Array([
