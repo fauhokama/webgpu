@@ -12,8 +12,7 @@ const getBasics = async () => {
 
     const adapter = await gpu.requestAdapter();
     const device = await adapter.requestDevice();
-    const queue = device.queue;
-    return { adapter, device, queue };
+    return { adapter, device };
 };
 
 const canvasRelated = (device: GPUDevice) => {
@@ -76,7 +75,7 @@ const getCellPipeline = (device, canvasFormat) => {
 };
 
 const main = async () => {
-    const { adapter, device, queue } = await getBasics();
+    const { adapter, device } = await getBasics();
     const { context, canvasFormat } = canvasRelated(device);
 
     const vertices = new Float32Array([
@@ -90,7 +89,7 @@ const main = async () => {
         size: vertices.byteLength, // if 1 byte = 8 bits, and the array is a 32 bit array: 32 x 12 = 384 bits. 384 / 8 = 48 bytes.
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST, // this buffer will be used to supply vertex data and can be the destination for copy commands.
     });
-    queue.writeBuffer(vertexBuffer, 0, vertices);
+    device.queue.writeBuffer(vertexBuffer, 0, vertices);
 
     // Clear the canvas with a render pass
     const encoder = device.createCommandEncoder();
@@ -113,7 +112,7 @@ const main = async () => {
 
     pass.end();
 
-    queue.submit([encoder.finish()]);
+    device.queue.submit([encoder.finish()]);
 };
 
 main();
