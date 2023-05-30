@@ -28,6 +28,53 @@ const canvasRelated = (device: GPUDevice) => {
     return { context, canvasFormat };
 };
 
+const getCellPipeline = (device, canvasFormat) => {
+    const vertexBufferLayout = {
+        arrayStride: 8, // vertices is actually 4 vértices. Each vertex is 2 floats, so 32 bits x 2 = 64 bits = 8 bytes.
+        attributes: [
+            //  individual pieces of information encoded into each vertex
+            {
+                format: 'float32x2', // Again, each vertex is 2 floats.
+                offset: 0, // This buffer only has position data (no extra data), so the offset is 0.
+                shaderLocation: 0, // Arbitrary number between 0 and 15 and must be unique for every attribute that you define. Matches @location(0) in the @vertex shader.
+            },
+        ],
+    };
+
+    // Create the shader that will render the cells.
+    const cellShaderVert = device.createShaderModule({
+        label: 'Cell Vert shader',
+        code: vertShaderCode, // VertexShader calculates position.
+    });
+    const cellShaderFrag = device.createShaderModule({
+        label: 'Cell Frag shader',
+        code: fragShaderCode, // FragmentShader calculates color.
+    });
+
+    // Create a pipeline that renders the cell.
+    const cellPipeline = device.createRenderPipeline({
+        label: 'Cell pipeline',
+        layout: 'auto',
+        vertex: {
+            module: cellShaderVert,
+            entryPoint: 'vertexMain',
+            // @ts-ignore
+            buffers: [vertexBufferLayout],
+        },
+        fragment: {
+            module: cellShaderFrag,
+            entryPoint: 'fragmentMain',
+            targets: [
+                {
+                    format: canvasFormat,
+                },
+            ],
+        },
+    });
+
+    return cellPipeline;
+};
+
 const main = async () => {
     const { adapter, device, queue } = await getBasics();
     const { context, canvasFormat } = canvasRelated(device);
@@ -40,47 +87,10 @@ const main = async () => {
 
     const vertexBuffer = device.createBuffer({
         label: 'Cell vertices',
-        size: vertices.byteLength,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        size: vertices.byteLength, // if 1 byte = 8 bits, and the array is a 32 bit array: 32 x 12 = 384 bits. 384 / 8 = 48 bytes.
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST, // this buffer will be used to supply vertex data and can be the destination for copy commands.
     });
-
-    const vertexBufferLayout = {
-        arrayStride: 8,
-        attributes: [
-            {
-                format: 'float32x2',
-                offset: 0,
-                shaderLocation: 0, // Position. Matches @location(0) in the @vertex shader.
-            },
-        ],
-    };
-
-    // Create the shader that will render the cells.
-    const cellShaderModule = device.createShaderModule({
-        label: 'Cell shader',
-        code: `${vertShaderCode}${fragShaderCode}`,
-    });
-
-    // Create a pipeline that renders the cell.
-    const cellPipeline = device.createRenderPipeline({
-        label: 'Cell pipeline',
-        layout: 'auto',
-        vertex: {
-            module: cellShaderModule,
-            entryPoint: 'vertexMain',
-            // @ts-ignore
-            buffers: [vertexBufferLayout],
-        },
-        fragment: {
-            module: cellShaderModule,
-            entryPoint: 'fragmentMain',
-            targets: [
-                {
-                    format: canvasFormat,
-                },
-            ],
-        },
-    });
+    queue.writeBuffer(vertexBuffer, 0, vertices);
 
     // Clear the canvas with a render pass
     const encoder = device.createCommandEncoder();
@@ -96,10 +106,8 @@ const main = async () => {
         ],
     });
 
-    queue.writeBuffer(vertexBuffer, 0, vertices);
-
     // Draw the square.
-    pass.setPipeline(cellPipeline);
+    pass.setPipeline(getCellPipeline(device, canvasFormat));
     pass.setVertexBuffer(0, vertexBuffer);
     pass.draw(vertices.length / 2);
 
